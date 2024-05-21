@@ -149,7 +149,7 @@ export function MicrophonePage() {
             audioChunks.current.push(event.data);
         };
         mediaRecorder.current.onstop = () => {
-            const audioBlob = new Blob(audioChunks.current, { type: 'audio/wav' });
+            const audioBlob = new Blob(audioChunks.current, { type: 'audio/mp4' });
             const url = URL.createObjectURL(audioBlob);
             setAudioURL(url);
             setAudioBlob(audioBlob);
