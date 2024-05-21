@@ -5,6 +5,10 @@ import MicIcon from '@mui/icons-material/Mic';
 import StopIcon from '@mui/icons-material/Stop';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import FileDownloadOutlinedIcon from '@mui/icons-material/FileDownloadOutlined';
+import { createTheme, ThemeProvider } from '@mui/material/styles';
+import {ReplaySharp} from "@mui/icons-material";
+
+const local_environment_api = "http://127.0.0.1:5000";
 
 export function MicrophonePage() {
     const [isRecording, setIsRecording] = useState(false);
@@ -19,6 +23,7 @@ export function MicrophonePage() {
     const fileInputRef = useRef(null);
     const timerRef = useRef(null);
     const audioRef = useRef(null);
+    const [audioBlob, setAudioBlob] = useState(null);
 
     const styles = {
         main: {
@@ -47,7 +52,8 @@ export function MicrophonePage() {
             border: '2px solid transparent',
         },
         audio: {
-            display: 'none'
+            display: 'block',
+            marginTop: '20px'
         },
         recordingText: {
             color: 'white',
@@ -67,7 +73,7 @@ export function MicrophonePage() {
         },
         inputContainer: {
             marginTop: '20px',
-            width: '80%'
+            width: '95%'
         },
         buttonsContainer: {
             display: 'flex',
@@ -75,7 +81,10 @@ export function MicrophonePage() {
             marginTop: '20px'
         },
         button: {
-            margin: '0 10px'
+            margin: '0 10px',
+            width: '170px',
+            height: '50px',
+            textTransform: 'none'
         },
         timeLabels: {
             display: 'flex',
@@ -92,6 +101,34 @@ export function MicrophonePage() {
             marginTop: '10px'
         }
     };
+
+    const theme = createTheme({
+        components: {
+            MuiTextField: {
+                styleOverrides: {
+                    root: {
+                        '& label.Mui-focused': {
+                            color: 'white',
+                        },
+                        '& .MuiInput-underline:after': {
+                            borderBottomColor: 'white',
+                        },
+                        '& .MuiOutlinedInput-root': {
+                            '& fieldset': {
+                                borderColor: 'white',
+                            },
+                            '&:hover fieldset': {
+                                borderColor: 'white',
+                            },
+                            '&.Mui-focused fieldset': {
+                                borderColor: 'white',
+                            },
+                        },
+                    },
+                },
+            },
+        },
+    });
 
     const handleClickDownload = () => {
         fileInputRef.current.click();
@@ -115,6 +152,7 @@ export function MicrophonePage() {
             const audioBlob = new Blob(audioChunks.current, { type: 'audio/wav' });
             const url = URL.createObjectURL(audioBlob);
             setAudioURL(url);
+            setAudioBlob(audioBlob);
             audioChunks.current = [];
             clearInterval(timerRef.current);
             setRecordingFinished(true);
@@ -148,9 +186,25 @@ export function MicrophonePage() {
         return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
     };
 
-    const handleSave = () => {
-        // Логика сохранения записи
-        console.log(`Saving recording: ${recordingName}`);
+    const handleSave = async () => {
+        if (audioBlob && recordingName) {
+            const formData = new FormData();
+            formData.append('audio', audioBlob, `${recordingName}.m4a`);
+            formData.append('filename', recordingName);
+
+            try {
+                const response = await fetch(`${local_environment_api}/upload_audio`, {
+                    method: 'POST',
+                    body: formData
+                });
+                const result = await response.json();
+                console.log('Server response:', result);
+            } catch (error) {
+                console.error('Error uploading audio:', error);
+            }
+        } else {
+            console.error('No audio file or recording name provided.');
+        }
     };
 
     const handleStartAgain = () => {
@@ -191,94 +245,100 @@ export function MicrophonePage() {
     }, []);
 
     return (
-        <div style={styles.main}>
-            <input
-                type="file"
-                ref={fileInputRef}
-                style={{ display: 'none' }}
-                accept="audio/*"
-                onChange={handleFileChange}
-            />
-            <IconButton style={styles.download} variant="contained" onClick={handleClickDownload}>
-                <FileDownloadOutlinedIcon />
-            </IconButton>
-            {!recordingFinished && (
-                <IconButton
-                    style={styles.circleButtonStyle}
-                    variant="contained"
-                    onClick={handleMicrophoneClick}
-                >
-                    {isRecording ? (
-                        <StopIcon sx={{ fontSize: 90 }} />
-                    ) : (
-                        <MicIcon sx={{ fontSize: 90 }} />
-                    )}
+        <ThemeProvider theme={theme}>
+            <div style={styles.main}>
+                <input
+                    type="file"
+                    ref={fileInputRef}
+                    style={{ display: 'none' }}
+                    accept=".m4a, .mp3"
+                    onChange={handleFileChange}
+                />
+                <IconButton style={styles.download} variant="contained" onClick={handleClickDownload}>
+                    <FileDownloadOutlinedIcon />
                 </IconButton>
-            )}
-            {isRecording && (
-                <>
-                    <div style={styles.recordingText}>
-                        Recording
+                {!recordingFinished && (
+                    <IconButton
+                        style={styles.circleButtonStyle}
+                        variant="contained"
+                        onClick={handleMicrophoneClick}
+                    >
+                        {isRecording ? (
+                            <StopIcon sx={{ fontSize: 90 }} />
+                        ) : (
+                            <MicIcon sx={{ fontSize: 90 }} />
+                        )}
+                    </IconButton>
+                )}
+                {isRecording && (
+                    <>
+                        <div style={styles.recordingText}>
+                            Record
+                        </div>
+                        <div style={styles.timer}>
+                            {formatTime(recordingTime)}
+                        </div>
+                    </>
+                )}
+                {recordingFinished && (
+                    <div style={styles.playbackContainer}>
+                        <div style={styles.recordingText}>
+                            Recording length: {formatTime(recordingTime)}
+                            <IconButton style={styles.playStopButton} onClick={handlePlayPause}>
+                                {isPlaying ? (
+                                    <StopIcon />
+                                ) : (
+                                    <PlayArrowIcon />
+                                )}
+                            </IconButton>
+                        </div>
+                        <audio ref={audioRef} src={audioURL} style={styles.audio} controls />
+                        <div style={styles.inputContainer}>
+                            <TextField
+                                label="Name the recording"
+                                variant="outlined"
+                                value={recordingName}
+                                onChange={(e) => setRecordingName(e.target.value)}
+                                fullWidth
+                                sx={{
+                                    '& .MuiOutlinedInput-root': {
+                                        width: '100%'
+                                    },
+                                }}
+                                InputProps={{
+                                    style: {
+                                        color: 'white'
+                                    }
+                                }}
+                                InputLabelProps={{
+                                    style: {
+                                        color: 'white'
+                                    }
+                                }}
+                            />
+                        </div>
+                        <div style={styles.buttonsContainer}>
+
+                            <Button
+                                variant="contained"
+                                style={{ ...styles.button, backgroundColor: 'white', color: 'black' }}
+                                onClick={handleSave}
+                            >
+                                <FileDownloadOutlinedIcon />
+                                Save
+                            </Button>
+                            <Button
+                                variant="outlined"
+                                style={{ ...styles.button, backgroundColor: '#EC3763', color: 'white' }}
+                                onClick={handleStartAgain}
+                            >
+                                <ReplaySharp />
+                                Start again
+                            </Button>
+                        </div>
                     </div>
-                    <div style={styles.timer}>
-                        {formatTime(recordingTime)}
-                    </div>
-                </>
-            )}
-            {recordingFinished && (
-                <div style={styles.playbackContainer}>
-                    <div style={styles.recordingText}>
-                        Recording length: {formatTime(recordingTime)}
-                        <IconButton style={styles.playStopButton} onClick={handlePlayPause}>
-                            {isPlaying ? (
-                                <StopIcon />
-                            ) : (
-                                <PlayArrowIcon />
-                            )}
-                        </IconButton>
-                    </div>
-                    <audio ref={audioRef} src={audioURL} style={styles.audio} />
-                    <input
-                        type="range"
-                        min="0"
-                        max={recordingTime}
-                        value={currentTime}
-                        onChange={handleProgressBarChange}
-                        style={styles.progressBar}
-                    />
-                    <div style={styles.timeLabels}>
-                        <span>00:00</span>
-                        <span>{formatTime(recordingTime)}</span>
-                    </div>
-                    <div style={styles.inputContainer}>
-                        <TextField
-                            label="Name the recording"
-                            variant="outlined"
-                            value={recordingName}
-                            onChange={(e) => setRecordingName(e.target.value)}
-                            fullWidth
-                        />
-                    </div>
-                    <div style={styles.buttonsContainer}>
-                        <Button
-                            variant="contained"
-                            color="primary"
-                            onClick={handleSave}
-                            style={styles.button}
-                        >
-                            Save
-                        </Button>
-                        <Button
-                            variant="outlined"
-                            color="secondary"
-                            onClick={handleStartAgain}
-                            style={styles.button}
-                        >
-                            Start again
-                        </Button>
-                    </div>
-                </div>
-            )}
-        </div>
+                )}
+            </div>
+        </ThemeProvider>
     );
 }
