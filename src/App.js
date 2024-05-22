@@ -47,7 +47,7 @@ function App() {
             <BottomNavigation
                 value={value}
                 onChange={handleChange}
-                style={{ backgroundColor: '#282c34', position: 'fixed', bottom: 0, width: '100%' }}
+                style={{ backgroundColor: '#000000', position: 'fixed', bottom: 0, width: '100%' }}
             >
                 <BottomNavigationAction
                     component={Link}

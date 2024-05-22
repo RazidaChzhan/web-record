@@ -1,12 +1,12 @@
 import './App.css';
 import React, { useState, useRef, useEffect } from 'react';
-import { IconButton, TextField, Button } from '@mui/material';
+import { IconButton, TextField, Button, Snackbar, Alert } from '@mui/material';
 import MicIcon from '@mui/icons-material/Mic';
 import StopIcon from '@mui/icons-material/Stop';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import FileDownloadOutlinedIcon from '@mui/icons-material/FileDownloadOutlined';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
-import {ReplaySharp} from "@mui/icons-material";
+import { ReplaySharp } from "@mui/icons-material";
 
 const local_environment_api = "http://127.0.0.1:5000";
 
@@ -18,6 +18,7 @@ export function MicrophonePage() {
     const [recordingFinished, setRecordingFinished] = useState(false);
     const [recordingName, setRecordingName] = useState('');
     const [isPlaying, setIsPlaying] = useState(false);
+    const [openSnackbar, setOpenSnackbar] = useState(false);
     const mediaRecorder = useRef(null);
     const audioChunks = useRef([]);
     const fileInputRef = useRef(null);
@@ -27,7 +28,7 @@ export function MicrophonePage() {
 
     const styles = {
         main: {
-            backgroundColor: '#282c34',
+            backgroundColor: '#000000',
             minHeight: '100vh',
             display: 'flex',
             flexDirection: 'column',
@@ -142,7 +143,23 @@ export function MicrophonePage() {
         }
     };
 
+    const checkRecordStatus = async () => {
+        try {
+            const response = await fetch(`${local_environment_api}/getRecordStatus`);
+            const result = await response.json();
+            return result.status === 1;
+        } catch (error) {
+            console.error('Error checking record status:', error);
+            return false;
+        }
+    };
+
     const startRecording = async () => {
+        const canRecord = await checkRecordStatus();
+        if (!canRecord) {
+            setOpenSnackbar(true);
+            return;
+        }
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         mediaRecorder.current = new MediaRecorder(stream);
         mediaRecorder.current.ondataavailable = (event) => {
@@ -244,6 +261,10 @@ export function MicrophonePage() {
         }
     }, []);
 
+    const handleCloseSnackbar = () => {
+        setOpenSnackbar(false);
+    };
+
     return (
         <ThemeProvider theme={theme}>
             <div style={styles.main}>
@@ -338,6 +359,15 @@ export function MicrophonePage() {
                         </div>
                     </div>
                 )}
+                <Snackbar
+                    open={openSnackbar}
+                    autoHideDuration={6000}
+                    onClose={handleCloseSnackbar}
+                >
+                    <Alert onClose={handleCloseSnackbar} severity="warning" sx={{ width: '100%' }}>
+                        I'm sorry, but as this is a demo you're limited to 3 recordings for now.
+                    </Alert>
+                </Snackbar>
             </div>
         </ThemeProvider>
     );
