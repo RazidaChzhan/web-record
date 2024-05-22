@@ -4,9 +4,9 @@ import { Routes, Route, Link, Navigate, useLocation } from 'react-router-dom';
 import { BottomNavigation, BottomNavigationAction } from '@mui/material';
 import MicNoneIcon from '@mui/icons-material/MicNone';
 import Inventory2OutlinedIcon from '@mui/icons-material/Inventory2Outlined';
-import ArchivePage from './ArchivePage';
+import ArchiveMain from './archive/components/archive-main-component';
 import { MicrophonePage } from "./MicrophonePage";
-
+import Digest from './archive/components/digest-component';
 function App() {
     const location = useLocation();
     const [value, setValue] = useState(location.pathname);
@@ -23,8 +23,9 @@ function App() {
         <>
             <Routes>
                 <Route path="/microphone" element={<MicrophonePage />} />
-                <Route path="/archive" element={<ArchivePage />} />
+                <Route path="/archive" element={<ArchiveMain />} />
                 <Route path="/" element={<Navigate to="/microphone" />} />
+                <Route path="/digest/:transcription_id" element={<Digest />} />
             </Routes>
             <BottomNavigation
                 value={value}
