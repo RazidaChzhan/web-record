@@ -7,9 +7,22 @@ import Inventory2OutlinedIcon from '@mui/icons-material/Inventory2Outlined';
 import ArchiveMain from './archive/components/archive-main-component';
 import { MicrophonePage } from "./MicrophonePage";
 import Digest from './archive/components/digest-component';
+import SignInPage from './SignInPage';
+import { getAuth, onAuthStateChanged } from 'firebase/auth';
+
 function App() {
     const location = useLocation();
     const [value, setValue] = useState(location.pathname);
+    const [user, setUser] = useState(null);
+
+    useEffect(() => {
+        const auth = getAuth();
+        const unsubscribe = onAuthStateChanged(auth, (user) => {
+            setUser(user);
+        });
+
+        return () => unsubscribe();
+    }, []);
 
     useEffect(() => {
         setValue(location.pathname);
@@ -18,6 +31,10 @@ function App() {
     const handleChange = (event, newValue) => {
         setValue(newValue);
     };
+
+    if (!user) {
+        return <SignInPage />;
+    }
 
     return (
         <>
